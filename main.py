@@ -1,3 +1,4 @@
+#!/bin/python
 import pygame
 from vgio.quake import pak, mdl, palette
 from pygame.locals import *
