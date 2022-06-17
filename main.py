@@ -5,18 +5,25 @@ from pygame.locals import *
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from PIL import Image
-import cProfile
 
 pygame.init()
 fps = 500
 fpsclock = pygame.time.Clock()
 
-models = []
 pak_0 = pak.PakFile('ID1/PAK0.PAK')
-with pak_0.open('progs/player.mdl') as mdl_file:
-    model = mdl.Mdl.open(mdl_file)
-    models.append(model)
+for name in pak_0.namelist():
+    if name[:5] == 'progs' and name [-4:] == ".mdl":
+        print(name[6:-4])
 
+def set_model():
+    # Gets the model the player wants
+    name = input('which model would you like to load?')
+    with pak_0.open('progs/' + name + '.mdl') as mdl_file:
+        model = mdl.Mdl.open(mdl_file)
+    
+    return model
+
+model = set_model()
 
 def setup_textures(model):
     # Grabs raw data and turns it into RGB values
@@ -46,36 +53,36 @@ def render():
     # Renders the actual model
     glEnable(GL_TEXTURE_2D)
     glBegin(GL_TRIANGLES)
-    for num, model in enumerate(models):
-        for triangle in model.triangles:
-            # Has to check in the case of seams
-            front_face = triangle.faces_front
-            for vertex in triangle.vertexes:
-                mdl_vertex = model.frames[0].vertexes[vertex]
-                mdl_uvs = model.st_vertexes[vertex]
-                on_seam = mdl_uvs.on_seam
-                x = mdl_vertex.x * model.scale[0] + model.origin[0]
-                y = mdl_vertex.y * model.scale[1] + model.origin[1]
-                z = mdl_vertex.z * model.scale[2] + model.origin[2]
-                if front_face == 0 and on_seam:
-                    s = (mdl_uvs.s + model.skin_width / 2) / model.skin_width
-                else:
-                    s = mdl_uvs.s / model.skin_width
-                t = 1 - mdl_uvs.t / model.skin_height
-                glTexCoord2f(s, t)
-                glVertex3fv((y, z, x))
+    for triangle in model.triangles:
+        # Has to check in the case of seams
+        front_face = triangle.faces_front
+        for vertex in triangle.vertexes:
+            mdl_vertex = model.frames[0].vertexes[vertex]
+            mdl_uvs = model.st_vertexes[vertex]
+            on_seam = mdl_uvs.on_seam
+            x = mdl_vertex.x * model.scale[0] + model.origin[0]
+            y = mdl_vertex.y * model.scale[1] + model.origin[1]
+            z = mdl_vertex.z * model.scale[2] + model.origin[2]
+            if front_face == 0 and on_seam:
+                s = (mdl_uvs.s + model.skin_width / 2) / model.skin_width
+            else:
+                s = mdl_uvs.s / model.skin_width
+            t = 1 - mdl_uvs.t / model.skin_height
+            glTexCoord2f(s, t)
+            glVertex3fv((y, z, x))
     glEnd()
 
 RESX, RESY = 640, 480
 screen = pygame.display.set_mode((RESX, RESY), DOUBLEBUF|OPENGL)
             
-gluPerspective(45, (RESX/RESY), 0.1, 300)
-glTranslatef(0, -25, -150)
+gluPerspective(45, (RESX/RESY), 0.1, 1000)
+glTranslatef(0, 0, -300 * model.scale[0])
 glEnable(GL_DEPTH_TEST)
+glEnable(GL_CULL_FACE)
+glCullFace(GL_FRONT)
 
-tex_list = []
-for model in models:
-    tex_list.append(setup_textures(models[0]))
+
+setup_textures(model)
 running = True
 while running:
     for event in pygame.event.get():
